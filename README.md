@@ -30,3 +30,12 @@ The app fetches real TV series from [The Movie Database (TMDB)](https://www.them
 - **My List** shows everything you’ve liked; **Discover** brings you back to swiping.
 
 Built with React, Vite, and Framer Motion.
+
+## GitHub Pages
+
+The app deploys to **https://buskilz4289.github.io/BuskilzSeries/** via GitHub Actions.
+
+1. In the repo go to **Settings → Pages**.
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+3. Push to `main` (or run the “Deploy to GitHub Pages” workflow). The first run may need to be triggered from the **Actions** tab.
+4. Open **https://buskilz4289.github.io/BuskilzSeries/** (no 404s).
