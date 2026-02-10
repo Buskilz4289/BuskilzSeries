@@ -55,6 +55,7 @@ export default function DiscoverPage({
               onCardExit={onCardExit}
               onPlayTrailer={series.trailerId ? () => onPlayTrailer(series) : undefined}
               isTop={index === 0}
+              disabled={isBusy}
             />
           ))}
         </AnimatePresence>

@@ -99,9 +99,11 @@ function makeGradient(accent) {
   return `linear-gradient(135deg, rgba(${r * 255},${g * 255},${b * 255},1) 0%, rgba(${r * 255 + 0.08},${g * 255 + 0.06},${b * 255 + 0.08},1) 50%, rgba(${r * 255},${g * 255},${b * 255},1) 100%)`
 }
 
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500'
+
 /**
  * Map a TMDB TV result to our app's show shape.
- * trailerId left null; can be filled later via /tv/{id}/videos if needed.
+ * posterUrl from TMDB poster_path; trailerId left null (can add via /tv/{id}/videos later).
  */
 export function mapTMDBToShow(item, genreMap = {}) {
   if (!item || !item.id) return null
@@ -111,6 +113,7 @@ export function mapTMDBToShow(item, genreMap = {}) {
     .filter(Boolean)
   const genre = genreNames.length ? genreNames.join(' · ') : 'TV'
   const accent = pickAccent(item.id)
+  const posterUrl = item.poster_path ? TMDB_IMAGE_BASE + item.poster_path : null
   return {
     id: String(item.id),
     title: item.name || 'Untitled',
@@ -121,6 +124,7 @@ export function mapTMDBToShow(item, genreMap = {}) {
     gradient: makeGradient(accent),
     accent,
     trailerId: null,
+    posterUrl,
   }
 }
 

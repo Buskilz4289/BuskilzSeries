@@ -11,17 +11,10 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
-### TMDB API key (required for discovery feed)
+### Where the data comes from
 
-The app fetches real TV series from [The Movie Database (TMDB)](https://www.themoviedb.org/).
-
-1. Get a free API key at [TMDB Settings → API](https://www.themoviedb.org/settings/api).
-2. Copy `.env.example` to `.env` and set your key:
-   ```bash
-   cp .env.example .env
-   ```
-3. Edit `.env` and set `VITE_TMDB_API_KEY=your_key_here`.
-4. Restart the dev server.
+- **By default** the app uses the [TVmaze API](https://www.tvmaze.com/api) — no API key required. You get real TV series from the network as soon as you run the app.
+- **Optional:** Add a [TMDB](https://www.themoviedb.org/settings/api) API key in `.env` as `VITE_TMDB_API_KEY=...` to use TMDB instead of TVmaze.
 
 ## Use
 

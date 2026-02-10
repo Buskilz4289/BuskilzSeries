@@ -1,39 +1,72 @@
 /**
  * Central discovery hook: feed state, async loading, undo, persistence.
- * Uses TMDB via discoveryService; caches pages in service layer (no refetch).
- * Tracks seen/liked/skipped across sessions; disables actions while loading.
+ * Uses discoveryService (TMDB if key set, else TVmaze).
+ * Persists liked, skipped, and seen in localStorage via useLocalStorage; no UI flicker on load.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchShows } from '../services/discoveryService'
-import { loadMatches, saveMatches, loadDisliked, saveDisliked } from '../lib/storage'
+import {
+  loadMatches,
+  loadDisliked,
+  loadSeenIds,
+  STORAGE_KEY_MATCHES,
+  STORAGE_KEY_DISLIKED,
+  STORAGE_KEY_SEEN,
+} from '../lib/storage'
+import { useLocalStorage } from './useLocalStorage'
 
 const LOAD_MORE_THRESHOLD = 2
 
+function isShowObject(x) {
+  return x && typeof x === 'object' && x.id != null
+}
+
+function validateMatchesShows(parsed) {
+  if (!Array.isArray(parsed)) return undefined
+  const filtered = parsed.filter(isShowObject)
+  return filtered.length === parsed.length ? filtered : undefined
+}
+
+function validateSeenIds(parsed) {
+  if (!Array.isArray(parsed)) return undefined
+  return parsed.filter((id) => typeof id === 'string' || typeof id === 'number').map(String)
+}
+
+function getInitialSeenIds() {
+  const seen = loadSeenIds()
+  const liked = loadMatches().map((s) => s.id)
+  const skipped = loadDisliked().map((s) => s.id)
+  return [...new Set([...seen, ...liked, ...skipped])]
+}
+
 export function useDiscoveryFeed() {
+  const [matches, setMatches] = useLocalStorage(
+    STORAGE_KEY_MATCHES,
+    loadMatches,
+    (p) => validateMatchesShows(p) ?? loadMatches()
+  )
+  const [disliked, setDisliked] = useLocalStorage(
+    STORAGE_KEY_DISLIKED,
+    loadDisliked,
+    (p) => validateMatchesShows(p) ?? loadDisliked()
+  )
+  const [seenIds, setSeenIds] = useLocalStorage(STORAGE_KEY_SEEN, getInitialSeenIds, (p) =>
+    Array.isArray(p) ? validateSeenIds(p) : undefined
+  )
+
   const [stack, setStack] = useState([])
-  const [matches, setMatches] = useState(loadMatches)
-  const [disliked, setDisliked] = useState(loadDisliked)
   const [lastSwiped, setLastSwiped] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [error, setError] = useState(null)
   const [hasMore, setHasMore] = useState(true)
   const nextPageRef = useRef(0)
-  const excludeIdsRef = useRef([
-    ...loadMatches().map((s) => s.id),
-    ...loadDisliked().map((s) => s.id),
-  ])
+  const excludeIdsRef = useRef(getInitialSeenIds())
 
-  const persistAndSync = useCallback(() => {
-    const likedIds = matches.map((s) => s.id)
-    const skippedIds = disliked.map((s) => s.id)
-    saveMatches(matches)
-    saveDisliked(disliked)
-    excludeIdsRef.current = [...likedIds, ...skippedIds]
-  }, [matches, disliked])
-
-  useEffect(() => persistAndSync(), [persistAndSync])
+  useEffect(() => {
+    excludeIdsRef.current = seenIds
+  }, [seenIds])
 
   const loadMore = useCallback(async () => {
     setError(null)
@@ -62,13 +95,14 @@ export function useDiscoveryFeed() {
   const onSwipe = useCallback((show, direction) => {
     if (!show || !show.id) return
     setIsTransitioning(true)
+    setSeenIds((prev) => (prev.includes(String(show.id)) ? prev : [...prev, String(show.id)]))
     if (direction === 'right') {
       setMatches((m) => [show, ...m])
     } else {
       setDisliked((d) => [show, ...d])
     }
     setLastSwiped({ show, direction })
-  }, [])
+  }, [setSeenIds])
 
   const onCardExit = useCallback((id) => {
     setStack((prev) => prev.filter((s) => s.id !== id))
@@ -97,15 +131,16 @@ export function useDiscoveryFeed() {
   }, [])
 
   const seeSkippedAgain = useCallback(() => {
+    const likedIds = matches.map((s) => String(s.id))
     setDisliked([])
-    excludeIdsRef.current = matches.map((s) => s.id)
-    saveDisliked([])
+    setSeenIds((prev) => prev.filter((id) => !disliked.some((d) => String(d.id) === id)))
+    excludeIdsRef.current = likedIds
     nextPageRef.current = 0
     setHasMore(true)
     setError(null)
     setIsLoading(true)
     fetchShows({
-      excludeIds: excludeIdsRef.current,
+      excludeIds: likedIds,
       page: 0,
     })
       .then(({ shows, hasMore: more }) => {
@@ -117,7 +152,7 @@ export function useDiscoveryFeed() {
         setError(err instanceof Error ? err.message : 'Failed to load shows')
       })
       .finally(() => setIsLoading(false))
-  }, [matches])
+  }, [matches, disliked, setDisliked, setSeenIds])
 
   const retry = useCallback(() => {
     setError(null)
@@ -148,3 +183,6 @@ export function useDiscoveryFeed() {
     retry,
   }
 }
+
+/** Alias for discovery hook (useDiscoverShows). */
+export { useDiscoveryFeed as useDiscoverShows }

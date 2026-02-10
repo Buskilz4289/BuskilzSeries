@@ -1,6 +1,6 @@
 /**
  * Discovery service: fetches TV series for the swipe feed.
- * With API key: uses TMDB (cached). Without: falls back to local catalog.
+ * Priority: TMDB (if key set) → TVmaze (no key) → local catalog.
  * Excludes liked/skipped IDs so the same series never appears twice.
  */
 
@@ -10,11 +10,12 @@ import {
   mapTMDBToShow,
   isTmdbConfigured,
 } from './tmdb'
+import { fetchShows as fetchShowsTvmaze } from './tvmazeService'
 import { getSeriesCatalog } from '../data/series'
 
 const LOCAL_PAGE_SIZE = 8
 
-/** When no API key: use local catalog, paginated and filtered. */
+/** Fallback when no network API: local catalog, paginated and filtered. */
 async function fetchShowsLocal({ excludeIds = [], page = 0 } = {}) {
   const catalog = getSeriesCatalog()
   const excludeSet = new Set(excludeIds.map(String))
@@ -26,23 +27,22 @@ async function fetchShowsLocal({ excludeIds = [], page = 0 } = {}) {
   return { shows, hasMore }
 }
 
-/** Fetches one page from TMDB or local catalog, filters by excludeIds. */
+/** Single entry point: TMDB → TVmaze → local, filters by excludeIds. */
 export async function fetchShows({ excludeIds = [], page = 0 } = {}) {
-  if (!isTmdbConfigured()) {
-    return fetchShowsLocal({ excludeIds, page })
+  if (isTmdbConfigured()) {
+    const pageNum = page + 1
+    const [genreMap, { results, total_pages }] = await Promise.all([
+      fetchGenres(),
+      fetchTVDiscoveryPage(pageNum),
+    ])
+    const excludeSet = new Set(excludeIds.map(String))
+    const mapped = (results || [])
+      .map((item) => mapTMDBToShow(item, genreMap))
+      .filter(Boolean)
+      .filter((s) => !excludeSet.has(s.id))
+    return { shows: mapped, hasMore: pageNum < (total_pages || 0) }
   }
-  const pageNum = page + 1
-  const [genreMap, { results, total_pages }] = await Promise.all([
-    fetchGenres(),
-    fetchTVDiscoveryPage(pageNum),
-  ])
-  const excludeSet = new Set(excludeIds.map(String))
-  const mapped = (results || [])
-    .map((item) => mapTMDBToShow(item, genreMap))
-    .filter(Boolean)
-    .filter((s) => !excludeSet.has(s.id))
-  const hasMore = pageNum < (total_pages || 0)
-  return { shows: mapped, hasMore }
+  return fetchShowsTvmaze({ excludeIds, page })
 }
 
 export { isTmdbConfigured }

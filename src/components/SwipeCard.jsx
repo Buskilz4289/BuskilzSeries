@@ -2,49 +2,66 @@ import { useRef, useImperativeHandle, forwardRef } from 'react'
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 import { PlayIcon } from './Icons'
 
-// Subtle entrance: cards animate in when they enter the stack (e.g. after undo or start over)
+// Industry standard: right = LIKE, left = NOPE
+const SWIPE_THRESHOLD_PX = 100
+const VELOCITY_THRESHOLD = 500
+const EXIT_OFFSET_PX = 400
+
 const cardEntrance = {
   initial: { opacity: 0, y: 12, scale: 0.98 },
   animate: { opacity: 1, y: 0, scale: 1 },
   transition: { duration: 0.25, ease: 'easeOut' },
 }
 
-const SwipeCard = forwardRef(function SwipeCard({ series, onSwipe, onCardExit, onPlayTrailer, isTop }, ref) {
+const SwipeCard = forwardRef(function SwipeCard(
+  { series, onSwipe, onCardExit, onPlayTrailer, isTop, disabled = false },
+  ref
+) {
   const x = useMotionValue(0)
   const opacity = useMotionValue(1)
   const rotate = useTransform(x, [-200, 200], [-12, 12])
-  const opacityLike = useTransform(x, [0, 120], [0, 1])
-  const opacityNope = useTransform(x, [-120, 0], [1, 0])
+  const opacityLike = useTransform(x, [0, SWIPE_THRESHOLD_PX], [0, 1])
+  const opacityNope = useTransform(x, [-SWIPE_THRESHOLD_PX, 0], [1, 0])
   const cardRef = useRef(null)
+  const isExitingRef = useRef(false)
 
   const runExit = (dir) => {
-    const toX = dir === 'right' ? 400 : -400
+    if (isExitingRef.current) return
+    isExitingRef.current = true
+    const toX = dir === 'right' ? EXIT_OFFSET_PX : -EXIT_OFFSET_PX
     onSwipe(series, dir)
-    const controls = animate(x, toX, {
+    animate(x, toX, {
       type: 'tween',
       duration: 0.25,
-      onComplete: () => onCardExit?.(series?.id),
+      ease: 'easeOut',
+      onComplete: () => {
+        onCardExit?.(series?.id)
+        isExitingRef.current = false
+      },
     })
     animate(opacity, 0, { type: 'tween', duration: 0.2 })
-    return () => controls.stop()
   }
 
   useImperativeHandle(ref, () => ({
     swipe: (dir) => {
-      runExit(dir)
+      if (!isExitingRef.current && (dir === 'right' || dir === 'left')) runExit(dir)
     },
   }))
 
   const handleDragEnd = (_, info) => {
-    const threshold = 100
-    if (info.offset.x > threshold) {
+    const { offset, velocity } = info
+    const fastFlickRight = velocity.x > VELOCITY_THRESHOLD
+    const fastFlickLeft = velocity.x < -VELOCITY_THRESHOLD
+    if (offset.x > SWIPE_THRESHOLD_PX || fastFlickRight) {
       runExit('right')
-    } else if (info.offset.x < -threshold) {
+    } else if (offset.x < -SWIPE_THRESHOLD_PX || fastFlickLeft) {
       runExit('left')
     } else {
       animate(x, 0, { type: 'spring', stiffness: 400, damping: 30 })
     }
   }
+
+  const canInteract = isTop && !disabled
 
   return (
     <motion.article
@@ -56,18 +73,25 @@ const SwipeCard = forwardRef(function SwipeCard({ series, onSwipe, onCardExit, o
         opacity,
         rotate,
         zIndex: isTop ? 10 : 5,
-        pointerEvents: isTop ? 'auto' : 'none',
+        pointerEvents: canInteract ? 'auto' : 'none',
         background: series.gradient,
         boxShadow: isTop ? '0 25px 80px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06)' : '0 10px 40px -10px rgba(0,0,0,0.4)',
         ['--accent']: series.accent,
       }}
-      drag={isTop ? 'x' : false}
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.6}
+      drag={canInteract ? 'x' : false}
+      dragConstraints={{ left: -EXIT_OFFSET_PX, right: EXIT_OFFSET_PX }}
+      dragElastic={0.5}
       onDragEnd={handleDragEnd}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
       <div className="swipe-card__poster">
+        {series.posterUrl && (
+          <img
+            src={series.posterUrl}
+            alt=""
+            className="swipe-card__poster-img"
+          />
+        )}
         <span className="swipe-card__rating">{series.rating}</span>
         <span className="swipe-card__year">{series.year}</span>
       </div>

@@ -17,7 +17,7 @@ export default function ActionButtons({ onLike, onNope, onUndo, canUndo, disable
         className="actions__btn actions__btn--nope"
         onClick={onNope}
         disabled={disabled}
-        aria-label="Skip series"
+        aria-label="Nope (skip series)"
         whileHover={hoverScale}
         whileTap={tapScale}
       >
@@ -47,7 +47,7 @@ export default function ActionButtons({ onLike, onNope, onUndo, canUndo, disable
         className="actions__btn actions__btn--like"
         onClick={onLike}
         disabled={disabled}
-        aria-label="Add to list"
+        aria-label="Like (add to list)"
         whileHover={hoverScale}
         whileTap={tapScale}
       >

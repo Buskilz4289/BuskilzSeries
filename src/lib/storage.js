@@ -1,6 +1,7 @@
-// Liked/skipped shows and watched episodes. Persisted across sessions.
-const STORAGE_KEY_MATCHES = 'series-swipe-matches'
-const STORAGE_KEY_DISLIKED = 'series-swipe-disliked'
+// Liked/skipped/seen shows and watched episodes. Persisted across sessions.
+export const STORAGE_KEY_MATCHES = 'series-swipe-matches'
+export const STORAGE_KEY_DISLIKED = 'series-swipe-disliked'
+export const STORAGE_KEY_SEEN = 'series-swipe-seen'
 const STORAGE_KEY_WATCHED = 'series-swipe-watched'
 
 function isShowObject(x) {
@@ -46,6 +47,28 @@ export function loadDisliked() {
 export function saveDisliked(shows) {
   try {
     localStorage.setItem(STORAGE_KEY_DISLIKED, JSON.stringify(shows || []))
+  } catch {
+    // ignore
+  }
+}
+
+/** Load seen show IDs (any swiped show). Safe on empty/corrupt. */
+export function loadSeenIds() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SEEN)
+    if (!raw) return []
+    const data = JSON.parse(raw)
+    if (!Array.isArray(data)) return []
+    return data.filter((id) => typeof id === 'string' || typeof id === 'number').map(String)
+  } catch {
+    return []
+  }
+}
+
+/** Persist seen show IDs. */
+export function saveSeenIds(ids) {
+  try {
+    localStorage.setItem(STORAGE_KEY_SEEN, JSON.stringify(ids || []))
   } catch {
     // ignore
   }
