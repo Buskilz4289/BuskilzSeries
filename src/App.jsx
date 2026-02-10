@@ -1,38 +1,69 @@
-import { useState } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import TrailerModal from './components/TrailerModal'
 import DiscoverPage from './pages/DiscoverPage'
 import ReviewedPage from './pages/ReviewedPage'
 import { useDiscoveryFeed } from './hooks/useDiscoveryFeed'
+import { useSearchShows } from './hooks/useSearchShows'
 import { useWatchedEpisodes } from './hooks/useWatchedEpisodes'
 
 /**
- * App shell: view state, trailer modal, and two main views (Discover / Reviewed).
- * Discovery and persistence are centralized in useDiscoveryFeed and useWatchedEpisodes.
+ * App shell: view state, trailer modal, Discover (search + swipe) and Reviewed.
+ * Discover uses search results as the swipe stack; persistence via useDiscoveryFeed.
  */
 function App() {
   const [view, setView] = useState('swipe')
   const [trailerSeries, setTrailerSeries] = useState(null)
 
   const {
-    stack,
     matches,
     disliked,
-    lastSwiped,
-    isLoading,
-    isBusy,
-    hasCards,
-    hasMore,
-    error,
-    retry,
-    onSwipe,
-    onCardExit,
-    undo,
+    isLoading: discoveryLoading,
+    isBusy: discoveryBusy,
+    onSwipe: discoveryOnSwipe,
     restoreToDiscover,
     removeFromMatches,
-    seeSkippedAgain,
+    onReviewList: focusReviewed,
   } = useDiscoveryFeed()
   const { watched, toggleWatched } = useWatchedEpisodes()
+
+  const {
+    query,
+    setQuery,
+    year,
+    setYear,
+    genre,
+    setGenre,
+    runSearch,
+    filteredResults,
+    genresFromResults,
+    isLoading: searchLoading,
+    error: searchError,
+    retry: searchRetry,
+  } = useSearchShows()
+
+  const [removedIds, setRemovedIds] = useState(() => new Set())
+
+  useEffect(() => {
+    setRemovedIds(new Set())
+  }, [query])
+
+  const stack = useMemo(
+    () => filteredResults.filter((s) => !removedIds.has(s.id)),
+    [filteredResults, removedIds]
+  )
+
+  const handleSwipe = useCallback(
+    (show, direction) => {
+      if (!show?.id) return
+      setRemovedIds((prev) => new Set(prev).add(show.id))
+      discoveryOnSwipe(show, direction)
+    },
+    [discoveryOnSwipe]
+  )
+
+  const hasCards = stack.length > 0
+  const isBusy = searchLoading || discoveryBusy
 
   return (
     <div className="app" role="application" aria-label="BuskilzSeries TV discovery">
@@ -72,18 +103,22 @@ function App() {
               key="discover"
               stack={stack}
               hasCards={hasCards}
-              isLoading={isLoading}
+              isLoading={searchLoading}
               isBusy={isBusy}
-              error={error}
-              retry={retry}
-              onSwipe={onSwipe}
-              onCardExit={onCardExit}
-              undo={undo}
-              lastSwiped={lastSwiped}
+              error={searchError}
+              retry={searchRetry}
+              onSwipe={handleSwipe}
+              onCardExit={() => {}}
               onPlayTrailer={setTrailerSeries}
-              seeSkippedAgain={seeSkippedAgain}
-              hasMore={hasMore}
               onReviewList={() => setView('reviewed')}
+              query={query}
+              setQuery={setQuery}
+              year={year}
+              setYear={setYear}
+              genre={genre}
+              setGenre={setGenre}
+              runSearch={runSearch}
+              genresFromResults={genresFromResults}
             />
           )}
           {view === 'reviewed' && (

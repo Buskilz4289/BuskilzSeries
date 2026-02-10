@@ -1,13 +1,13 @@
 import { useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import SwipeCard from '../components/SwipeCard'
-import ActionButtons from '../components/ActionButtons'
+import SearchBar from '../components/SearchBar'
 import EmptyStateDiscover from '../components/EmptyStateDiscover'
 import StackSkeleton from '../components/StackSkeleton'
 
 /**
- * Discover view: swipeable feed, actions, and empty/loading states.
- * Keyboard: Arrow keys trigger swipe when cards are present.
+ * Discover view: search bar, filters, and swipeable result stack.
+ * Swipe or use arrow keys; no heart/X buttons.
  */
 export default function DiscoverPage({
   stack,
@@ -18,16 +18,18 @@ export default function DiscoverPage({
   retry,
   onSwipe,
   onCardExit,
-  undo,
-  lastSwiped,
   onPlayTrailer,
-  seeSkippedAgain,
-  hasMore,
   onReviewList,
+  query,
+  setQuery,
+  year,
+  setYear,
+  genre,
+  setGenre,
+  runSearch,
+  genresFromResults,
 }) {
   const topCardRef = useRef(null)
-  const handleLike = () => topCardRef.current?.swipe('right')
-  const handleNope = () => topCardRef.current?.swipe('left')
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -39,11 +41,26 @@ export default function DiscoverPage({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [hasCards, isBusy])
 
+  const hasSearched = query.trim().length > 0
   const showEmpty = !hasCards && !isLoading && !error
-  const showExhausted = showEmpty && !hasMore
+  const showNoResults = showEmpty && hasSearched
+  const showSearchPrompt = showEmpty && !hasSearched
 
   return (
     <>
+      <SearchBar
+        query={query}
+        onQueryChange={setQuery}
+        onSearch={runSearch}
+        year={year}
+        onYearChange={setYear}
+        genre={genre}
+        onGenreChange={setGenre}
+        genresFromResults={genresFromResults}
+        isLoading={isLoading}
+        disabled={isBusy}
+      />
+
       <div className="stack" role="region" aria-label="Discovery stack">
         <AnimatePresence mode="popLayout">
           {stack.map((series, index) => (
@@ -69,42 +86,34 @@ export default function DiscoverPage({
               type="button"
               className="empty-state__btn empty-state__btn--primary"
               onClick={retry}
-              aria-label="Retry loading shows"
+              aria-label="Retry search"
             >
               Retry
             </button>
           </div>
         )}
-        {showEmpty && (
+        {showSearchPrompt && (
           <EmptyStateDiscover
-            exhausted={showExhausted}
-            onSeeSkippedAgain={seeSkippedAgain}
+            exhausted={false}
             onReviewList={onReviewList}
+            emptyMessage="Search for TV series above"
+            subMessage="Results appear here. Swipe right to like, left to skip."
+          />
+        )}
+        {showNoResults && (
+          <EmptyStateDiscover
+            exhausted={false}
+            onReviewList={onReviewList}
+            emptyMessage="No results"
+            subMessage="Try a different search or adjust year/genre filters."
           />
         )}
       </div>
 
       {hasCards && (
-        <ActionButtons
-          onLike={handleLike}
-          onNope={handleNope}
-          onUndo={undo}
-          canUndo={!!lastSwiped}
-          disabled={isBusy}
-        />
-      )}
-
-      {hasCards && (
-        <>
-          <p className="hint" id="discover-hint">
-            Swipe or use arrow keys ← →
-          </p>
-          {isLoading && (
-            <p className="hint hint--loading" aria-live="polite">
-              Loading more…
-            </p>
-          )}
-        </>
+        <p className="hint" id="discover-hint">
+          Swipe or use arrow keys ← →
+        </p>
       )}
     </>
   )

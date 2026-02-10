@@ -2,14 +2,20 @@ import { motion } from 'framer-motion'
 
 /**
  * Shown when the discover stack is empty.
- * Exhausted: user has seen everything; offer "See skipped again" and "Review My List".
- * Not exhausted: e.g. loading or no content yet; show a single CTA.
+ * Optional emptyMessage/subMessage for search mode; otherwise exhausted/prompt copy.
  */
 export default function EmptyStateDiscover({
   exhausted,
   onSeeSkippedAgain,
   onReviewList,
+  emptyMessage,
+  subMessage,
 }) {
+  const title = emptyMessage ?? (exhausted ? "You're all caught up" : 'No more shows')
+  const sub = subMessage ?? (exhausted
+    ? "You've seen everything in the catalog. See skipped shows again or review your list."
+    : "You've seen everything in the stack. Try seeing skipped again or check your list.")
+
   return (
     <motion.div
       className="empty-state empty-state--discover"
@@ -22,14 +28,8 @@ export default function EmptyStateDiscover({
       <span className="empty-state__icon" aria-hidden>
         {exhausted ? '✨' : '📺'}
       </span>
-      <p className="empty-state__text">
-        {exhausted ? "You're all caught up" : 'No more shows'}
-      </p>
-      <p className="empty-state__sub">
-        {exhausted
-          ? "You've seen everything in the catalog. See skipped shows again or review your list."
-          : "You've seen everything in the stack. Try seeing skipped again or check your list."}
-      </p>
+      <p className="empty-state__text">{title}</p>
+      <p className="empty-state__sub">{sub}</p>
       <div className="empty-state__actions">
         {onSeeSkippedAgain && (
           <motion.button

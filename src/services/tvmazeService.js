@@ -83,3 +83,25 @@ export async function fetchShows({ excludeIds = [], page = 0 } = {}) {
   const hasMore = mapped.length > BATCH_SIZE || raw.length >= 250
   return { shows, hasMore }
 }
+
+const searchCache = new Map()
+
+/**
+ * Search TV series by title using TVmaze search endpoint.
+ * Returns array of shows in app shape; empty array if query is blank.
+ */
+export async function searchShows(query) {
+  const q = typeof query === 'string' ? query.trim() : ''
+  if (!q) return []
+  const cacheKey = q.toLowerCase()
+  if (searchCache.has(cacheKey)) return searchCache.get(cacheKey)
+  const res = await fetch(`${TVMAZE_BASE}/search/shows?q=${encodeURIComponent(q)}`)
+  if (!res.ok) throw new Error(`Search failed: ${res.status}`)
+  const data = await res.json()
+  const list = Array.isArray(data) ? data : []
+  const shows = list
+    .map((item) => (item && item.show ? mapTvmazeToShow(item.show) : null))
+    .filter(Boolean)
+  searchCache.set(cacheKey, shows)
+  return shows
+}
