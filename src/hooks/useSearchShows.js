@@ -1,6 +1,7 @@
 /**
  * Search and filter hook for TV series.
- * Fetches from TVmaze search API; applies year and genre filters client-side.
+ * TVmaze API used only for title search (/search/shows?q=). Year and genre
+ * are applied client-side after fetch; genres derived from returned shows.
  */
 
 import { useState, useCallback, useMemo } from 'react'
@@ -19,8 +20,12 @@ export function useSearchShows() {
     setError(null)
     if (!q) {
       setSearchResults([])
+      setYear('')
+      setGenre('')
       return
     }
+    setYear('')
+    setGenre('')
     setIsLoading(true)
     try {
       const shows = await searchShows(q)
@@ -37,22 +42,21 @@ export function useSearchShows() {
     if (query.trim()) runSearch(query)
   }, [query, runSearch])
 
+  // Client-side only; no mutation of searchResults (filter returns new arrays)
   const filteredResults = useMemo(() => {
-    let list = searchResults
+    if (!query.trim() || searchResults.length === 0) return []
     const yearStr = String(year).trim()
-    if (yearStr) {
-      list = list.filter((show) => show.year && String(show.year).includes(yearStr))
-    }
     const genreStr = String(genre).trim()
-    if (genreStr) {
-      list = list.filter(
-        (show) => show.genre && show.genre.toLowerCase().includes(genreStr.toLowerCase())
-      )
-    }
-    return list
-  }, [searchResults, year, genre])
+    return searchResults.filter((show) => {
+      if (yearStr && (!show.year || !String(show.year).includes(yearStr))) return false
+      if (genreStr && (!show.genre || !show.genre.toLowerCase().includes(genreStr.toLowerCase()))) return false
+      return true
+    })
+  }, [query, searchResults, year, genre])
 
+  // Genres from current search results only; populated after data is loaded
   const genresFromResults = useMemo(() => {
+    if (searchResults.length === 0) return []
     const set = new Set()
     searchResults.forEach((show) => {
       if (show.genre) {
@@ -61,6 +65,8 @@ export function useSearchShows() {
     })
     return [...set].sort()
   }, [searchResults])
+
+  const hasSearchResults = searchResults.length > 0
 
   return {
     query,
@@ -73,6 +79,7 @@ export function useSearchShows() {
     searchResults,
     filteredResults,
     genresFromResults,
+    hasSearchResults,
     isLoading,
     error,
     retry,

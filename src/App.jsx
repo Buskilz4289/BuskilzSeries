@@ -43,6 +43,7 @@ function App() {
     runSearch,
     filteredResults,
     genresFromResults,
+    hasSearchResults,
     isLoading: searchLoading,
     error: searchError,
     retry: searchRetry,
@@ -136,6 +137,7 @@ function App() {
               setGenre={setGenre}
               runSearch={runSearch}
               genresFromResults={genresFromResults}
+              hasSearchResults={hasSearchResults}
               isSearchMode={isSearchMode}
               hasMore={hasMore}
               seeSkippedAgain={seeSkippedAgain}

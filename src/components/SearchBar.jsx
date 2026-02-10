@@ -1,6 +1,6 @@
 /**
  * Search bar and filters for TV series discovery.
- * Search by title; filter by year and genre (client-side on current results).
+ * Title search only via API; year and genre filters are client-side and disabled until results load.
  */
 export default function SearchBar({
   query,
@@ -13,11 +13,15 @@ export default function SearchBar({
   genresFromResults,
   isLoading,
   disabled,
+  filtersDisabled,
 }) {
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (!query.trim()) return
     onSearch(query)
   }
+
+  const filtersAreDisabled = disabled || filtersDisabled
 
   return (
     <form className="search-bar" onSubmit={handleSubmit} role="search" aria-label="Search shows">
@@ -49,7 +53,7 @@ export default function SearchBar({
           placeholder="Year"
           value={year}
           onChange={(e) => onYearChange(e.target.value)}
-          disabled={disabled}
+          disabled={filtersAreDisabled}
           aria-label="Filter by release year"
           inputMode="numeric"
         />
@@ -57,7 +61,7 @@ export default function SearchBar({
           className="search-bar__genre"
           value={genre}
           onChange={(e) => onGenreChange(e.target.value)}
-          disabled={disabled}
+          disabled={filtersAreDisabled}
           aria-label="Filter by genre"
         >
           <option value="">All genres</option>
@@ -68,6 +72,11 @@ export default function SearchBar({
           ))}
         </select>
       </div>
+      {filtersDisabled && (
+        <p className="search-bar__hint" role="status" aria-live="polite">
+          Search for a show to see filters
+        </p>
+      )}
     </form>
   )
 }

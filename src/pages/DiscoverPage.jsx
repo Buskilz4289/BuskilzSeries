@@ -28,6 +28,7 @@ export default function DiscoverPage({
   setGenre,
   runSearch,
   genresFromResults,
+  hasSearchResults,
   isSearchMode,
   hasMore,
   seeSkippedAgain,
@@ -61,6 +62,7 @@ export default function DiscoverPage({
         genresFromResults={genresFromResults}
         isLoading={isLoading}
         disabled={isBusy}
+        filtersDisabled={!hasSearchResults}
       />
 
       <div className="stack" role="region" aria-label="Discovery stack">

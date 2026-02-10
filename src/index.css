@@ -218,6 +218,12 @@ body {
   border-color: var(--accent);
 }
 
+.search-bar__hint {
+  margin: 10px 0 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
 /* ----- Main / Stack ----- */
 .main {
   flex: 1;
