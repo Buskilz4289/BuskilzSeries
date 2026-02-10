@@ -4,6 +4,12 @@ import { CloseIcon } from './Icons'
 
 const YOUTUBE_EMBED = 'https://www.youtube.com/embed/'
 
+/** Build YouTube search URL for "{title} trailer" fallback when no embed id. */
+function youtubeSearchUrl(title) {
+  const query = encodeURIComponent(`${title || 'TV series'} trailer`)
+  return `https://www.youtube.com/results?search_query=${query}`
+}
+
 export default function TrailerModal({ series, onClose }) {
   const closeRef = useRef(null)
   const previousActiveRef = useRef(null)
@@ -21,9 +27,11 @@ export default function TrailerModal({ series, onClose }) {
     }
   }, [onClose])
 
-  if (!series?.trailerId) return null
+  if (!series?.title) return null
 
-  const embedUrl = `${YOUTUBE_EMBED}${series.trailerId}?autoplay=1`
+  const hasEmbed = Boolean(series.trailerId)
+  const embedUrl = hasEmbed ? `${YOUTUBE_EMBED}${series.trailerId}?autoplay=1` : null
+  const searchUrl = youtubeSearchUrl(series.title)
 
   return (
     <motion.div
@@ -56,22 +64,38 @@ export default function TrailerModal({ series, onClose }) {
             <CloseIcon size={24} />
           </button>
         </div>
-        <div className="trailer-modal__video">
-          <iframe
-            src={embedUrl}
-            title={`${series.title} trailer`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-        <a
-          href={`https://www.youtube.com/watch?v=${series.trailerId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="trailer-modal__link"
-        >
-          Watch on YouTube ↗
-        </a>
+        {hasEmbed ? (
+          <>
+            <div className="trailer-modal__video">
+              <iframe
+                src={embedUrl}
+                title={`${series.title} trailer`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+            <a
+              href={`https://www.youtube.com/watch?v=${series.trailerId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="trailer-modal__link"
+            >
+              Watch on YouTube ↗
+            </a>
+          </>
+        ) : (
+          <div className="trailer-modal__fallback">
+            <p className="trailer-modal__fallback-text">No trailer embed for this show.</p>
+            <a
+              href={searchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="trailer-modal__link trailer-modal__link--primary"
+            >
+              Search “{series.title} trailer” on YouTube ↗
+            </a>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   )

@@ -53,7 +53,7 @@ export default function DiscoverPage({
               series={series}
               onSwipe={onSwipe}
               onCardExit={onCardExit}
-              onPlayTrailer={series.trailerId ? () => onPlayTrailer(series) : undefined}
+              onPlayTrailer={() => onPlayTrailer(series)}
               isTop={index === 0}
               disabled={isBusy}
             />

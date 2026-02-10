@@ -47,7 +47,7 @@ export default function MatchCard({
               <ChevronIcon open={isExpanded} /> Episodes
             </button>
           )}
-          {isLiked && show.trailerId && (
+          {isLiked && (
             <button type="button" className="match-card__trailer" onClick={() => onPlayTrailer(show)}>
               <PlayIcon size={18} /> Trailer
             </button>

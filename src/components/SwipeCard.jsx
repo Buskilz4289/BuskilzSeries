@@ -1,8 +1,8 @@
-import { useRef, useImperativeHandle, forwardRef } from 'react'
+import { useRef, useState, useImperativeHandle, forwardRef } from 'react'
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 import { PlayIcon } from './Icons'
 
-// Industry standard: right = LIKE, left = NOPE
+// Industry standard: right = LIKE, left = NOPE. Horizontal-only swipe.
 const SWIPE_THRESHOLD_PX = 100
 const VELOCITY_THRESHOLD = 500
 const EXIT_OFFSET_PX = 400
@@ -24,10 +24,13 @@ const SwipeCard = forwardRef(function SwipeCard(
   const opacityNope = useTransform(x, [-SWIPE_THRESHOLD_PX, 0], [1, 0])
   const cardRef = useRef(null)
   const isExitingRef = useRef(false)
+  const [isExiting, setIsExiting] = useState(false)
 
   const runExit = (dir) => {
     if (isExitingRef.current) return
+    if (dir !== 'right' && dir !== 'left') return
     isExitingRef.current = true
+    setIsExiting(true)
     const toX = dir === 'right' ? EXIT_OFFSET_PX : -EXIT_OFFSET_PX
     onSwipe(series, dir)
     animate(x, toX, {
@@ -37,6 +40,7 @@ const SwipeCard = forwardRef(function SwipeCard(
       onComplete: () => {
         onCardExit?.(series?.id)
         isExitingRef.current = false
+        setIsExiting(false)
       },
     })
     animate(opacity, 0, { type: 'tween', duration: 0.2 })
@@ -44,9 +48,9 @@ const SwipeCard = forwardRef(function SwipeCard(
 
   useImperativeHandle(ref, () => ({
     swipe: (dir) => {
-      if (!isExitingRef.current && (dir === 'right' || dir === 'left')) runExit(dir)
+      if (!isExitingRef.current && !disabled && (dir === 'right' || dir === 'left')) runExit(dir)
     },
-  }))
+  }), [disabled])
 
   const handleDragEnd = (_, info) => {
     const { offset, velocity } = info
@@ -61,7 +65,7 @@ const SwipeCard = forwardRef(function SwipeCard(
     }
   }
 
-  const canInteract = isTop && !disabled
+  const canInteract = isTop && !disabled && !isExiting
 
   return (
     <motion.article

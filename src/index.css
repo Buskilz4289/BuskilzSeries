@@ -882,3 +882,20 @@ body {
 .trailer-modal__link:hover {
   background: rgba(255, 255, 255, 0.04);
 }
+
+.trailer-modal__link--primary {
+  margin-top: 0;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 0 0 12px 12px;
+}
+
+.trailer-modal__fallback {
+  padding: 24px 20px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.trailer-modal__fallback-text {
+  margin: 0 0 16px;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+}
