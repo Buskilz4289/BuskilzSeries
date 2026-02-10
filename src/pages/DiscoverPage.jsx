@@ -6,8 +6,8 @@ import EmptyStateDiscover from '../components/EmptyStateDiscover'
 import StackSkeleton from '../components/StackSkeleton'
 
 /**
- * Discover view: search bar, filters, and swipeable result stack.
- * Swipe or use arrow keys; no heart/X buttons.
+ * Discover view: search bar (optional) above Discover feed. Default is Discover; clearing search returns to it.
+ * Single stack: Discover feed or Search results; same liked/skipped/seen state.
  */
 export default function DiscoverPage({
   stack,
@@ -28,6 +28,9 @@ export default function DiscoverPage({
   setGenre,
   runSearch,
   genresFromResults,
+  isSearchMode,
+  hasMore,
+  seeSkippedAgain,
 }) {
   const topCardRef = useRef(null)
 
@@ -41,10 +44,9 @@ export default function DiscoverPage({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [hasCards, isBusy])
 
-  const hasSearched = query.trim().length > 0
   const showEmpty = !hasCards && !isLoading && !error
-  const showNoResults = showEmpty && hasSearched
-  const showSearchPrompt = showEmpty && !hasSearched
+  const showNoResults = showEmpty && isSearchMode
+  const showDiscoverEmpty = showEmpty && !isSearchMode
 
   return (
     <>
@@ -92,12 +94,11 @@ export default function DiscoverPage({
             </button>
           </div>
         )}
-        {showSearchPrompt && (
+        {showDiscoverEmpty && (
           <EmptyStateDiscover
-            exhausted={false}
+            exhausted={!hasMore}
+            onSeeSkippedAgain={seeSkippedAgain}
             onReviewList={onReviewList}
-            emptyMessage="Search for TV series above"
-            subMessage="Results appear here. Swipe right to like, left to skip."
           />
         )}
         {showNoResults && (
@@ -105,7 +106,7 @@ export default function DiscoverPage({
             exhausted={false}
             onReviewList={onReviewList}
             emptyMessage="No results"
-            subMessage="Try a different search or adjust year/genre filters."
+            subMessage="Try a different search or clear the search to return to Discover."
           />
         )}
       </div>

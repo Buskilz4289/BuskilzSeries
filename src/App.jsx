@@ -8,22 +8,28 @@ import { useSearchShows } from './hooks/useSearchShows'
 import { useWatchedEpisodes } from './hooks/useWatchedEpisodes'
 
 /**
- * App shell: view state, trailer modal, Discover (search + swipe) and Reviewed.
- * Discover uses search results as the swipe stack; persistence via useDiscoveryFeed.
+ * App shell: Discover (default) + Search (optional), single source of truth in useDiscoveryFeed.
+ * Clearing search returns to Discover. Seen/liked/skipped shared and persisted.
  */
 function App() {
   const [view, setView] = useState('swipe')
   const [trailerSeries, setTrailerSeries] = useState(null)
 
   const {
+    stack: discoverStack,
     matches,
     disliked,
+    seenIds,
     isLoading: discoveryLoading,
     isBusy: discoveryBusy,
+    hasMore,
+    error: discoveryError,
+    retry: discoveryRetry,
     onSwipe: discoveryOnSwipe,
+    onCardExit: discoveryOnCardExit,
     restoreToDiscover,
     removeFromMatches,
-    onReviewList: focusReviewed,
+    seeSkippedAgain,
   } = useDiscoveryFeed()
   const { watched, toggleWatched } = useWatchedEpisodes()
 
@@ -42,28 +48,39 @@ function App() {
     retry: searchRetry,
   } = useSearchShows()
 
-  const [removedIds, setRemovedIds] = useState(() => new Set())
-
+  const [searchRemovedIds, setSearchRemovedIds] = useState(() => new Set())
   useEffect(() => {
-    setRemovedIds(new Set())
+    setSearchRemovedIds(new Set())
   }, [query])
 
-  const stack = useMemo(
-    () => filteredResults.filter((s) => !removedIds.has(s.id)),
-    [filteredResults, removedIds]
+  const seenSet = useMemo(() => new Set(seenIds.map(String)), [seenIds])
+  const searchStack = useMemo(
+    () =>
+      filteredResults.filter(
+        (s) => !seenSet.has(String(s.id)) && !searchRemovedIds.has(s.id)
+      ),
+    [filteredResults, seenSet, searchRemovedIds]
   )
+
+  const isSearchMode = query.trim().length > 0
+  const displayStack = isSearchMode ? searchStack : discoverStack
+  const hasCards = displayStack.length > 0
+  const isLoading = isSearchMode ? searchLoading : discoveryLoading
+  const error = isSearchMode ? searchError : discoveryError
+  const retry = isSearchMode ? searchRetry : discoveryRetry
+  const isBusy = searchLoading || discoveryBusy
 
   const handleSwipe = useCallback(
     (show, direction) => {
       if (!show?.id) return
-      setRemovedIds((prev) => new Set(prev).add(show.id))
+      if (isSearchMode) setSearchRemovedIds((prev) => new Set(prev).add(show.id))
       discoveryOnSwipe(show, direction)
     },
-    [discoveryOnSwipe]
+    [discoveryOnSwipe, isSearchMode]
   )
 
-  const hasCards = stack.length > 0
-  const isBusy = searchLoading || discoveryBusy
+  const onSwipe = handleSwipe
+  const onCardExit = isSearchMode ? () => {} : discoveryOnCardExit
 
   return (
     <div className="app" role="application" aria-label="BuskilzSeries TV discovery">
@@ -101,14 +118,14 @@ function App() {
           {view === 'swipe' && (
             <DiscoverPage
               key="discover"
-              stack={stack}
+              stack={displayStack}
               hasCards={hasCards}
-              isLoading={searchLoading}
+              isLoading={isLoading}
               isBusy={isBusy}
-              error={searchError}
-              retry={searchRetry}
-              onSwipe={handleSwipe}
-              onCardExit={() => {}}
+              error={error}
+              retry={retry}
+              onSwipe={onSwipe}
+              onCardExit={onCardExit}
               onPlayTrailer={setTrailerSeries}
               onReviewList={() => setView('reviewed')}
               query={query}
@@ -119,6 +136,9 @@ function App() {
               setGenre={setGenre}
               runSearch={runSearch}
               genresFromResults={genresFromResults}
+              isSearchMode={isSearchMode}
+              hasMore={hasMore}
+              seeSkippedAgain={seeSkippedAgain}
             />
           )}
           {view === 'reviewed' && (

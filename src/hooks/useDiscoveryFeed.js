@@ -166,6 +166,7 @@ export function useDiscoveryFeed() {
     stack,
     matches,
     disliked,
+    seenIds,
     lastSwiped,
     isLoading,
     isTransitioning,
